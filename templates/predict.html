@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Prediksi Buah – FruitScan KNN{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+  <!-- Page Header -->
+  <div class="page-header text-center mb-5">
+    <div class="page-header-icon mb-3">🔍</div>
+    <h1 class="page-title">Prediksi Jenis Buah</h1>
+    <p class="text-muted">Unggah gambar buah dan sistem KNN akan mengklasifikasikannya secara otomatis</p>
+  </div>
+
+  <div class="row g-4 justify-content-center">
+
+    <!-- Upload Section -->
+    <div class="col-lg-5">
+      <div class="glass-card p-4">
+        <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+          <i class="bi bi-cloud-upload text-primary"></i> Unggah Gambar
+        </h5>
+
+        <form method="POST" enctype="multipart/form-data" id="predict-form" action="{{ url_for('predict') }}">
+          <!-- Dropzone -->
+          <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+            <div class="dropzone-content" id="dropzone-content">
+              <div class="dropzone-icon">📂</div>
+              <p class="fw-semibold mb-1">Klik atau seret gambar ke sini</p>
+              <p class="text-muted small mb-0">PNG, JPG, JPEG • Maks. 10 MB</p>
+            </div>
+            <img id="preview-img" class="dropzone-preview d-none" alt="Preview">
+          </div>
+
+          <input type="file" name="file" id="file-input"
+                 accept=".png,.jpg,.jpeg,.webp" class="d-none"
+                 onchange="handleFileSelect(this)">
+
+          <!-- Fruit quick reference -->
+          <div class="mt-4 mb-3">
+            <small class="text-muted fw-semibold d-block mb-2">Buah yang Dapat Dikenali:</small>
+            <div class="d-flex flex-wrap gap-2">
+              {% for fruit in ['🍎 Apple', '🍌 Banana', '🍇 Grape', '🍈 Guava', '🥭 Mango', '🍈 Papaya'] %}
+              <span class="badge-fruit">{{ fruit }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary-grad w-100 btn-lg" id="btn-predict"
+                  onclick="showPredictLoading()">
+            <i class="bi bi-search me-2"></i>Analisis Gambar
+          </button>
+        </form>
+      </div>
+
+      <!-- Tips -->
+      <div class="glass-card p-4 mt-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Tips Unggah</h6>
+        <ul class="list-unstyled mb-0">
+          {% set tips = [
+            'Gunakan gambar dengan pencahayaan yang baik',
+            'Buah sebaiknya tampak jelas dan tidak terhalang',
+            'Resolusi minimal 100×100 pixel',
+            'Latar belakang polos meningkatkan akurasi'
+          ] %}
+          {% for tip in tips %}
+          <li class="d-flex gap-2 mb-2 small text-muted">
+            <i class="bi bi-check2-circle text-success mt-1 flex-shrink-0"></i>
+            {{ tip }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Result Section -->
+    <div class="col-lg-7">
+      {% if result %}
+      <div class="glass-card p-4 animate-fade-in">
+        <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+          <i class="bi bi-patch-check text-success"></i> Hasil Prediksi
+        </h5>
+
+        <div class="row g-4">
+          <!-- Uploaded image -->
+          <div class="col-md-5">
+            <div class="result-img-wrapper">
+              <img src="{{ result.image_url }}" alt="Uploaded fruit"
+                   class="result-img" id="result-image">
+            </div>
+          </div>
+
+          <!-- Prediction info -->
+          <div class="col-md-7">
+            {% set fruit_emojis = {'apple':'🍎','banana':'🍌','grape':'🍇','guava':'🍈','mango':'🥭','papaya':'🍈'} %}
+            {% set emoji = fruit_emojis.get(result.predicted_class, '🍑') %}
+
+            <div class="result-class-badge mb-3">
+              <span class="result-emoji">{{ emoji }}</span>
+              <div>
+                <div class="result-class-name">{{ result.predicted_class | title }}</div>
+                <div class="result-conf">Kepercayaan: <strong>{{ result.confidence }}%</strong></div>
+              </div>
+            </div>
+
+            <!-- Confidence bar -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1 small">
+                <span class="text-muted">Tingkat Keyakinan</span>
+                <span class="fw-bold">{{ result.confidence }}%</span>
+              </div>
+              <div class="progress" style="height:10px; border-radius:6px;">
+                <div class="progress-bar bg-gradient-green"
+                     style="width:{{ result.confidence }}%; border-radius:6px; transition: width 1s ease;"></div>
+              </div>
+            </div>
+
+            <!-- Vote distribution -->
+            <h6 class="fw-semibold mb-2 small text-muted text-uppercase letter-spacing">Distribusi Voting KNN</h6>
+            {% for cls, pct in result.probs %}
+            <div class="mb-2">
+              <div class="d-flex justify-content-between mb-1" style="font-size:0.8rem;">
+                <span>{{ fruit_emojis.get(cls, '🍑') }} {{ cls | title }}</span>
+                <span class="fw-semibold">{{ pct }}%</span>
+              </div>
+              <div class="progress" style="height:6px; border-radius:3px;">
+                <div class="progress-bar {% if cls == result.predicted_class %}bg-success{% else %}bg-secondary{% endif %}"
+                     style="width:{{ pct }}%; border-radius:3px;"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Re-predict -->
+        <div class="mt-4 pt-3 border-top d-flex gap-2">
+          <a href="{{ url_for('predict') }}" class="btn btn-outline-primary flex-grow-1" id="btn-predict-again">
+            <i class="bi bi-arrow-clockwise me-2"></i>Prediksi Lagi
+          </a>
+          <a href="{{ url_for('metrics_page') }}" class="btn btn-outline-secondary flex-shrink-0" id="btn-view-metrics">
+            <i class="bi bi-bar-chart-line"></i>
+          </a>
+        </div>
+      </div>
+      {% else %}
+      <!-- Empty state -->
+      <div class="glass-card p-5 text-center h-100 d-flex flex-column justify-content-center">
+        <div style="font-size:5rem; opacity:.3; filter:grayscale(1);">🍎🍌🍇</div>
+        <h5 class="fw-bold mt-3 mb-2 text-muted">Belum Ada Prediksi</h5>
+        <p class="text-muted small">Unggah gambar buah di panel kiri untuk memulai klasifikasi.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay d-none" id="predict-loading">
+  <div class="loading-box">
+    <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem;"></div>
+    <h5 class="text-white fw-bold">Menganalisis Gambar...</h5>
+    <p class="text-white-50 mb-0">KNN sedang bekerja</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('preview-img');
+    const content = document.getElementById('dropzone-content');
+    preview.src = e.target.result;
+    preview.classList.remove('d-none');
+    content.classList.add('d-none');
+    document.getElementById('dropzone').style.padding = '0.5rem';
+  };
+  reader.readAsDataURL(file);
+}
+
+// Drag and Drop
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('drag-over'); });
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const input = document.getElementById('file-input');
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    handleFileSelect(input);
+  }
+});
+
+function showPredictLoading() {
+  if (document.getElementById('file-input').files.length === 0) return;
+  document.getElementById('predict-loading').classList.remove('d-none');
+}
+
+// Animate progress bars on load
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.progress-bar').forEach(bar => {
+    const target = bar.style.width;
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = target; }, 200);
+  });
+});
+</script>
+{% endblock %}

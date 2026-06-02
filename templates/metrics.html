@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Metrik Model – FruitScan KNN{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+  <div class="page-header text-center mb-5">
+    <div class="page-header-icon mb-3">📊</div>
+    <h1 class="page-title">Metrik & Evaluasi Model</h1>
+    <p class="text-muted">Performa algoritma KNN pada dataset validasi</p>
+  </div>
+
+  {% if metrics %}
+
+  <!-- Summary Cards -->
+  <div class="row g-4 mb-5">
+    {% set cards = [
+      ('Akurasi', metrics.accuracy, '#22c55e', 'bi-bullseye', 'Persentase prediksi yang benar'),
+      ('F1-Score', metrics.f1_score, '#3b82f6', 'bi-graph-up', 'Harmonic mean presisi dan recall'),
+      ('Presisi', metrics.precision, '#f59e0b', 'bi-crosshair', 'Akurasi prediksi positif'),
+      ('Recall', metrics.recall, '#ec4899', 'bi-search', 'Kemampuan menemukan kelas yang benar')
+    ] %}
+    {% for label, val, color, icon, desc in cards %}
+    <div class="col-6 col-lg-3">
+      <div class="metric-card text-center p-4" style="--accent: {{ color }}">
+        <div class="metric-card-icon" style="color: {{ color }}">
+          <i class="bi {{ icon }}"></i>
+        </div>
+        <div class="metric-card-value" style="color: {{ color }}">
+          {{ "%.2f"|format(val * 100) }}%
+        </div>
+        <div class="metric-card-label">{{ label }}</div>
+        <div class="metric-card-desc">{{ desc }}</div>
+        <div class="metric-card-bar mt-3">
+          <div class="metric-bar-fill" style="width:{{ val*100 }}%; background: {{ color }}"></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-4 mb-5">
+    <!-- Confusion Matrix -->
+    <div class="col-lg-6">
+      <div class="glass-card p-4 h-100">
+        <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+          <i class="bi bi-grid-3x3-gap text-danger"></i> Confusion Matrix
+        </h5>
+        <p class="text-muted small mb-3">Distribusi prediksi benar & salah per kelas</p>
+        <div class="chart-wrapper text-center">
+          <img src="{{ url_for('static', filename='charts/confusion_matrix.png') }}"
+               alt="Confusion Matrix" class="img-fluid rounded shadow-sm"
+               id="confusion-matrix-img">
+        </div>
+      </div>
+    </div>
+
+    <!-- K Selection Chart -->
+    <div class="col-lg-6">
+      <div class="glass-card p-4 h-100">
+        <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
+          <i class="bi bi-sliders text-primary"></i> Pemilihan Nilai K
+        </h5>
+        <p class="text-muted small mb-3">Akurasi cross-validation untuk setiap k (k=1–15)</p>
+        <div class="chart-wrapper text-center">
+          <img src="{{ url_for('static', filename='charts/k_selection.png') }}"
+               alt="K Selection Chart" class="img-fluid rounded shadow-sm"
+               id="k-selection-img">
+        </div>
+        <div class="mt-3 text-center">
+          <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+            <i class="bi bi-star-fill me-1"></i> K Terbaik = {{ metrics.best_k }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Classification Report Table -->
+  <div class="glass-card p-4 mb-5">
+    <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+      <i class="bi bi-table text-info"></i> Laporan Klasifikasi per Kelas
+    </h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle" id="classification-table">
+        <thead>
+          <tr>
+            <th>Kelas</th>
+            <th class="text-center">Presisi</th>
+            <th class="text-center">Recall</th>
+            <th class="text-center">F1-Score</th>
+            <th class="text-center">Support</th>
+            <th class="text-center">Performa</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set fruit_emojis = {'apple':'🍎','banana':'🍌','grape':'🍇','guava':'🍈','mango':'🥭','papaya':'🍈'} %}
+          {% for cls in metrics.classes %}
+          {% if cls in metrics.report %}
+          {% set r = metrics.report[cls] %}
+          <tr>
+            <td>
+              <span class="me-2">{{ fruit_emojis.get(cls, '🍑') }}</span>
+              <strong>{{ cls | title }}</strong>
+            </td>
+            <td class="text-center">
+              <span class="fw-semibold">{{ "%.3f"|format(r['precision']) }}</span>
+            </td>
+            <td class="text-center">
+              <span class="fw-semibold">{{ "%.3f"|format(r['recall']) }}</span>
+            </td>
+            <td class="text-center">
+              <span class="fw-semibold">{{ "%.3f"|format(r['f1-score']) }}</span>
+            </td>
+            <td class="text-center text-muted">{{ r['support'] | int }}</td>
+            <td class="text-center" style="min-width:120px;">
+              <div class="progress" style="height:8px; border-radius:4px;">
+                <div class="progress-bar 
+                  {% if r['f1-score'] >= 0.8 %}bg-success
+                  {% elif r['f1-score'] >= 0.6 %}bg-warning
+                  {% else %}bg-danger{% endif %}"
+                  style="width:{{ r['f1-score']*100 }}%; border-radius:4px;"></div>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-dark">
+          <tr>
+            <th>Rata-rata</th>
+            <th class="text-center">{{ "%.3f"|format(metrics.precision) }}</th>
+            <th class="text-center">{{ "%.3f"|format(metrics.recall) }}</th>
+            <th class="text-center">{{ "%.3f"|format(metrics.f1_score) }}</th>
+            <th class="text-center text-muted">{{ metrics.n_val }}</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Model Info -->
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="glass-card p-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-gear text-secondary me-2"></i>Konfigurasi Model</h6>
+        <table class="table table-borderless table-sm mb-0">
+          <tr><td class="text-muted">Algoritma</td><td><strong>K-Nearest Neighbors (KNN)</strong></td></tr>
+          <tr><td class="text-muted">Nilai K</td><td><strong>{{ metrics.best_k }}</strong></td></tr>
+          <tr><td class="text-muted">Metrik Jarak</td><td><strong>Euclidean Distance</strong></td></tr>
+          <tr><td class="text-muted">Pembobotan</td><td><strong>Uniform</strong></td></tr>
+          <tr><td class="text-muted">Fitur</td><td><strong>18 (12 warna + 6 bentuk)</strong></td></tr>
+          <tr><td class="text-muted">Normalisasi</td><td><strong>StandardScaler (Z-score)</strong></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="glass-card p-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-database text-secondary me-2"></i>Dataset Info</h6>
+        <table class="table table-borderless table-sm mb-0">
+          <tr><td class="text-muted">Jumlah Kelas</td><td><strong>6 kelas buah</strong></td></tr>
+          <tr><td class="text-muted">Data Training</td><td><strong>{{ metrics.n_train }} gambar</strong></td></tr>
+          <tr><td class="text-muted">Data Validasi</td><td><strong>{{ metrics.n_val }} gambar</strong></td></tr>
+          <tr><td class="text-muted">Ukuran Gambar</td><td><strong>100 × 100 pixel</strong></td></tr>
+          <tr><td class="text-muted">Cross-Validation</td><td><strong>5-Fold CV</strong></td></tr>
+          <tr><td class="text-muted">Sumber Data</td><td><strong>Fruit Dataset (Kaggle)</strong></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="text-center py-5">
+    <div style="font-size:4rem;">📊</div>
+    <h4 class="mt-3">Belum ada metrik tersedia</h4>
+    <p class="text-muted">Latih model terlebih dahulu untuk melihat evaluasi performa.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary-grad mt-2">Ke Beranda</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

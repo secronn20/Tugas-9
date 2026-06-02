@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Beranda – FruitScan KNN{% endblock %}
+
+{% block content %}
+
+<!-- ===== HERO ===== -->
+<section class="hero-section">
+  <div class="hero-bg-blur"></div>
+  <div class="container position-relative">
+    <div class="row align-items-center min-vh-80">
+      <div class="col-lg-6 text-white">
+        <div class="hero-badge mb-3 animate-fade-up">
+          <i class="bi bi-stars me-1"></i> Powered by Machine Learning
+        </div>
+        <h1 class="hero-title animate-fade-up" style="animation-delay:.1s">
+          Klasifikasi Buah<br>
+          <span class="text-gradient">Cerdas & Akurat</span>
+        </h1>
+        <p class="hero-subtitle animate-fade-up" style="animation-delay:.2s">
+          Unggah foto buah dan biarkan algoritma <strong>K-Nearest Neighbors (KNN)</strong>
+          menganalisis warna serta ukurannya untuk mengidentifikasi jenis buah secara otomatis.
+        </p>
+        <div class="hero-actions animate-fade-up" style="animation-delay:.3s">
+          <a href="{{ url_for('predict') }}" class="btn btn-primary-grad btn-lg me-3" id="btn-start-predict">
+            <i class="bi bi-camera-fill me-2"></i>Mulai Prediksi
+          </a>
+          {% if not trained %}
+          <form method="POST" action="{{ url_for('train') }}" class="d-inline" id="form-train">
+            <button type="submit" class="btn btn-outline-light btn-lg" id="btn-train-model" onclick="showTrainLoading()">
+              <i class="bi bi-cpu me-2"></i>Latih Model
+            </button>
+          </form>
+          {% else %}
+          <a href="{{ url_for('metrics_page') }}" class="btn btn-outline-light btn-lg" id="btn-see-metrics">
+            <i class="bi bi-bar-chart me-2"></i>Lihat Metrik
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-6 text-center animate-fade-up" style="animation-delay:.4s">
+        <div class="hero-fruit-grid">
+          {% set fruits = [('🍎','Apple','#ff6b6b'),('🍌','Banana','#ffd93d'),('🍇','Grape','#a855f7'),('🍈','Guava','#4ade80'),('🥭','Mango','#fb923c'),('🍈','Papaya','#f97316')] %}
+          {% for emoji, name, color in fruits %}
+          <div class="fruit-card" style="--fruit-color: {{ color }}">
+            <div class="fruit-emoji">{{ emoji }}</div>
+            <div class="fruit-name">{{ name }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MODEL STATUS ===== -->
+<section class="py-5">
+  <div class="container">
+    <div class="row g-4">
+      <!-- Status Card -->
+      <div class="col-lg-4">
+        <div class="glass-card h-100 text-center p-4">
+          <div class="status-icon mb-3 {% if trained %}trained{% else %}untrained{% endif %}">
+            {% if trained %}
+            <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+            <i class="bi bi-hourglass-split"></i>
+            {% endif %}
+          </div>
+          <h5 class="fw-bold mb-1">Status Model</h5>
+          {% if trained %}
+          <p class="text-success fw-semibold mb-3">✅ Model Sudah Terlatih</p>
+          {% else %}
+          <p class="text-warning fw-semibold mb-3">⏳ Belum Dilatih</p>
+          {% endif %}
+          {% if not trained %}
+          <form method="POST" action="{{ url_for('train') }}" id="form-train-card">
+            <button type="submit" class="btn btn-warning w-100" id="btn-train-card" onclick="showTrainLoading()">
+              <i class="bi bi-play-circle me-2"></i>Latih Sekarang
+            </button>
+          </form>
+          {% else %}
+          <a href="{{ url_for('predict') }}" class="btn btn-success w-100" id="btn-go-predict">
+            <i class="bi bi-arrow-right-circle me-2"></i>Prediksi Buah
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Metrics Summary (if trained) -->
+      {% if trained and metrics %}
+      <div class="col-lg-8">
+        <div class="glass-card h-100 p-4">
+          <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+            <i class="bi bi-graph-up-arrow text-primary"></i> Performa Model
+          </h5>
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <div class="metric-mini-card">
+                <div class="metric-mini-value">{{ "%.1f"|format(metrics.accuracy * 100) }}%</div>
+                <div class="metric-mini-label">Akurasi</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="metric-mini-card">
+                <div class="metric-mini-value">{{ "%.1f"|format(metrics.f1_score * 100) }}%</div>
+                <div class="metric-mini-label">F1-Score</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="metric-mini-card">
+                <div class="metric-mini-value">{{ "%.1f"|format(metrics.precision * 100) }}%</div>
+                <div class="metric-mini-label">Presisi</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="metric-mini-card">
+                <div class="metric-mini-value">k={{ metrics.best_k }}</div>
+                <div class="metric-mini-label">K Terbaik</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="d-flex justify-content-between mb-1">
+              <small class="text-muted">Akurasi Validasi</small>
+              <small class="fw-semibold">{{ "%.2f"|format(metrics.accuracy * 100) }}%</small>
+            </div>
+            <div class="progress" style="height:8px; border-radius:4px;">
+              <div class="progress-bar bg-success" role="progressbar"
+                   style="width: {{ metrics.accuracy * 100 }}%; border-radius:4px;"></div>
+            </div>
+          </div>
+          <div class="row mt-3 text-muted small">
+            <div class="col-6"><i class="bi bi-collection me-1"></i> Training: {{ metrics.n_train }} sampel</div>
+            <div class="col-6"><i class="bi bi-check2-all me-1"></i> Validasi: {{ metrics.n_val }} sampel</div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-lg-8">
+        <div class="glass-card h-100 p-4">
+          <h5 class="fw-bold mb-4"><i class="bi bi-info-circle text-info me-2"></i>Tentang Sistem</h5>
+          <div class="row g-3">
+            {% set infos = [
+              ('bi-diagram-3','Algoritma KNN','K-Nearest Neighbors mengklasifikasikan buah berdasarkan kemiripan fitur dengan data latih.'),
+              ('bi-palette','Fitur Warna','Mean dan standar deviasi saluran RGB dan HSV diekstrak dari setiap gambar.'),
+              ('bi-rulers','Fitur Ukuran','Luas, keliling, aspek rasio, dan circularitas dihitung menggunakan deteksi kontur.'),
+              ('bi-trophy','6 Kelas Buah','Apple, Banana, Grape, Guava, Mango, dan Papaya.')
+            ] %}
+            {% for icon, title, desc in infos %}
+            <div class="col-md-6">
+              <div class="info-card d-flex gap-3">
+                <div class="info-icon"><i class="bi {{ icon }}"></i></div>
+                <div>
+                  <div class="fw-semibold">{{ title }}</div>
+                  <small class="text-muted">{{ desc }}</small>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section-alt py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">Bagaimana Cara Kerjanya?</h2>
+      <p class="text-muted">Pipeline klasifikasi buah 4 langkah</p>
+    </div>
+    <div class="row g-4">
+      {% set steps = [
+        ('1','bi-upload','Unggah Gambar','Pilih foto buah dari perangkat Anda. Sistem mendukung format JPG, PNG, dan JPEG.'),
+        ('2','bi-sliders','Ekstraksi Fitur','OpenCV menganalisis warna (RGB/HSV) dan bentuk buah secara otomatis dari gambar yang diunggah.'),
+        ('3','bi-cpu','KNN Bekerja','Algoritma KNN mencari k tetangga terdekat berdasarkan jarak Euclidean dalam ruang fitur.'),
+        ('4','bi-patch-check','Hasil Prediksi','Sistem menampilkan kelas buah yang diprediksi beserta tingkat kepercayaan dan distribusi voting.')
+      ] %}
+      {% for num, icon, title, desc in steps %}
+      <div class="col-lg-3 col-md-6">
+        <div class="step-card text-center p-4 h-100">
+          <div class="step-number">{{ num }}</div>
+          <div class="step-icon my-3"><i class="bi {{ icon }}"></i></div>
+          <h6 class="fw-bold">{{ title }}</h6>
+          <p class="text-muted small mb-0">{{ desc }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Train Loading Overlay -->
+<div class="loading-overlay d-none" id="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner-border text-warning mb-3" role="status" style="width:3rem;height:3rem;"></div>
+    <h5 class="text-white fw-bold">Melatih Model KNN...</h5>
+    <p class="text-white-50 mb-0">Proses ini mungkin membutuhkan beberapa menit.<br>Harap tunggu.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTrainLoading() {
+  document.getElementById('loading-overlay').classList.remove('d-none');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Tentang – FruitScan KNN{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+  <div class="page-header text-center mb-5">
+    <div class="page-header-icon mb-3">📖</div>
+    <h1 class="page-title">Tentang Proyek</h1>
+    <p class="text-muted">Penerapan Algoritma KNN untuk Klasifikasi Buah Berbasis Web</p>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Project Info -->
+    <div class="col-lg-8">
+      <div class="glass-card p-4 mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-file-text text-primary me-2"></i>Latar Belakang</h5>
+        <p class="text-muted">
+          Proyek ini merupakan implementasi algoritma <strong>K-Nearest Neighbors (KNN)</strong> untuk
+          mengklasifikasikan jenis buah berdasarkan fitur visual yang diekstrak dari gambar.
+          Sistem ini dikembangkan sebagai bagian dari Tugas 9 mata kuliah Kecerdasan Buatan.
+        </p>
+        <p class="text-muted mb-0">
+          Model KNN bekerja dengan mengekstrak 18 fitur dari setiap gambar—12 fitur warna (mean dan
+          standar deviasi saluran R, G, B, H, S, V) dan 6 fitur bentuk (luas, keliling, aspek rasio,
+          extent, circularitas, dan rasio ukuran)—lalu mencari k tetangga terdekat dalam ruang fitur
+          menggunakan jarak Euclidean.
+        </p>
+      </div>
+
+      <!-- Algorithm Explanation -->
+      <div class="glass-card p-4 mb-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-diagram-3 text-success me-2"></i>Algoritma KNN</h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="algo-step">
+              <div class="algo-step-num">1</div>
+              <div>
+                <strong>Ekstraksi Fitur</strong>
+                <p class="text-muted small mb-0">
+                  Setiap gambar di-resize ke 100×100 px, lalu diekstrak fitur warna (RGB/HSV)
+                  dan bentuk (kontur OpenCV).
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="algo-step">
+              <div class="algo-step-num">2</div>
+              <div>
+                <strong>Normalisasi</strong>
+                <p class="text-muted small mb-0">
+                  Fitur dinormalisasi menggunakan StandardScaler (z-score) agar semua fitur
+                  berada pada skala yang sama.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="algo-step">
+              <div class="algo-step-num">3</div>
+              <div>
+                <strong>Pemilihan K</strong>
+                <p class="text-muted small mb-0">
+                  Nilai k optimal dipilih menggunakan 5-fold cross-validation
+                  dengan mengujicoba k dari 1 hingga 15.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="algo-step">
+              <div class="algo-step-num">4</div>
+              <div>
+                <strong>Klasifikasi</strong>
+                <p class="text-muted small mb-0">
+                  Kelas diprediksi berdasarkan majority voting dari k tetangga
+                  terdekat menggunakan jarak Euclidean.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature Description -->
+      <div class="glass-card p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-list-check text-warning me-2"></i>Deskripsi Fitur (18 Fitur)</h5>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <h6 class="text-muted small text-uppercase fw-bold mb-2">🎨 Fitur Warna (12)</h6>
+            {% set color_feats = [
+              'Mean R (Red)','Std R (Red)',
+              'Mean G (Green)','Std G (Green)',
+              'Mean B (Blue)','Std B (Blue)',
+              'Mean H (Hue)','Std H (Hue)',
+              'Mean S (Saturation)','Std S (Saturation)',
+              'Mean V (Value)','Std V (Value)'
+            ] %}
+            {% for f in color_feats %}
+            <div class="feature-item">
+              <i class="bi bi-dot text-primary"></i> {{ f }}
+            </div>
+            {% endfor %}
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted small text-uppercase fw-bold mb-2">📐 Fitur Bentuk (6)</h6>
+            {% set shape_feats = [
+              'Luas (Area)','Keliling (Perimeter)',
+              'Aspek Rasio (W/H)','Extent (Area/BBox)',
+              'Circularitas','Rasio Ukuran ke Gambar'
+            ] %}
+            {% for f in shape_feats %}
+            <div class="feature-item">
+              <i class="bi bi-dot text-warning"></i> {{ f }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side Info -->
+    <div class="col-lg-4">
+      <!-- Tech Stack -->
+      <div class="glass-card p-4 mb-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-stack text-secondary me-2"></i>Teknologi</h6>
+        {% set techs = [
+          ('🐍','Python 3.x','Bahasa Pemrograman'),
+          ('🌶️','Flask','Web Framework'),
+          ('🤖','Scikit-learn','Machine Learning'),
+          ('👁️','OpenCV','Computer Vision'),
+          ('🔢','NumPy','Komputasi Numerik'),
+          ('📊','Matplotlib/Seaborn','Visualisasi'),
+          ('🎨','Bootstrap 5','UI Framework'),
+        ] %}
+        {% for emoji, name, role in techs %}
+        <div class="tech-row d-flex align-items-center gap-2 mb-2 p-2 rounded">
+          <span style="font-size:1.2rem;">{{ emoji }}</span>
+          <div>
+            <div class="fw-semibold" style="font-size:.9rem;">{{ name }}</div>
+            <div class="text-muted" style="font-size:.75rem;">{{ role }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Dataset Info -->
+      <div class="glass-card p-4 mb-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-database text-info me-2"></i>Dataset</h6>
+        <p class="text-muted small">
+          Dataset berisi gambar buah dari 6 kelas yang dibagi menjadi
+          set pelatihan, validasi, dan pengujian.
+        </p>
+        <div class="row g-2 text-center">
+          {% for fruit, emoji in [('Apple','🍎'),('Banana','🍌'),('Grape','🍇'),('Guava','🍈'),('Mango','🥭'),('Papaya','🍈')] %}
+          <div class="col-4">
+            <div class="dataset-fruit-card">
+              <div>{{ emoji }}</div>
+              <small>{{ fruit }}</small>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Tugas Info -->
+      <div class="glass-card p-4">
+        <h6 class="fw-bold mb-3"><i class="bi bi-mortarboard text-success me-2"></i>Info Tugas</h6>
+        <table class="table table-borderless table-sm mb-0 small">
+          <tr><td class="text-muted">Mata Kuliah</td><td><strong>Kecerdasan Buatan</strong></td></tr>
+          <tr><td class="text-muted">Tugas</td><td><strong>Tugas 9</strong></td></tr>
+          <tr><td class="text-muted">Topik</td><td><strong>KNN pada Aplikasi Web</strong></td></tr>
+          <tr><td class="text-muted">Framework</td><td><strong>Flask (Python)</strong></td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

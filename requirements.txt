@@ -1,0 +1,10 @@
+flask
+scikit-learn
+numpy
+opencv-python-headless
+Pillow
+joblib
+pandas
+seaborn
+matplotlib
+gunicorn
